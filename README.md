@@ -12,6 +12,7 @@ Abandoning analog warmth for digital coldness, it forces any signal into a ruthl
 One knob. Zero mercy.
 
 ![Plugin UI](./screenshot.png)
+
 https://github.com/user-attachments/assets/1ff514e6-a1e2-47ea-90b7-d61829fa6f78
 
 
