@@ -12,12 +12,10 @@ Abandoning analog warmth for digital coldness, it forces any signal into a ruthl
 One knob. Zero mercy.
 
 ![Plugin UI](./screenshot.png)
+https://github.com/user-attachments/assets/1ff514e6-a1e2-47ea-90b7-d61829fa6f78
+
 
 ## 🕸️ FEATURES
-
-https://github.com/user-attachments/assets/3e2a1a90-fa60-49c5-8214-3d9cd68a2afa
-
-
 
 ### **[ ONE KNOB CHAOS ]**
 A single control macros 3 stages of DSP processing. No presets, no confusion. Just turn it up to destroy.
