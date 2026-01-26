@@ -1,0 +1,19 @@
+# Visual Studio 쓰레기 파일들
+.vs/
+*.user
+*.suo
+*.sdf
+*.opensdf
+*.ipch
+/x64/
+/Debug/
+/Release/
+
+# JUCE 빌드 결과물 (제일 중요! 용량 괴물들)
+Builds/
+JuceLibraryCode/
+
+# 결과물 파일 (바이너리)
+*.vst3
+*.dll
+*.exe
