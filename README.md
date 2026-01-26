@@ -1,60 +1,58 @@
-# WX CRUSHER 😈
+# ★ WX CRUSHER ★
 
-![C++](https://img.shields.io/badge/C++-17-blue.svg?style=flat&logo=c%2B%2B)
-![JUCE](https://img.shields.io/badge/Framework-JUCE%207-green.svg?style=flat&logo=juce)
-![VST3](https://img.shields.io/badge/Format-VST3-orange.svg?style=flat)
+![C++](https://img.shields.io/badge/C++-17-000000.svg?style=flat&logo=c%2B%2B&logoColor=white)
+![JUCE](https://img.shields.io/badge/JUCE-FRAMEWORK-000000.svg?style=flat&logo=juce&logoColor=white)
+![VST3](https://img.shields.io/badge/VST3-COMPATIBLE-000000.svg?style=flat)
 
-> **"Make it Gritty. Make it Rage."**
+> **"TOTAL SONIC ANNIHILATION."**
 
-**WX CRUSHER** is an aggressive **One-Knob Distortion VST plugin** designed specifically for **Digicore, Rage, and Hyperpop** genres. Inspired by the raw, crushed sounds of the *Opium* label aesthetic, it turns simple waveforms into destructive square waves with a single turn.
+**WX CRUSHER** is a high-gain, digital distortion engine engineered for **Rage, Digicore, and Dark Trap** production.
+Abandoning analog warmth for digital coldness, it forces any signal into a ruthlessly hard-clipped square wave.
+
+One knob. Zero mercy.
 
 ![Plugin UI](./screenshot.png)
-*(Please add your screenshot image file here)*
 
-## 🔥 Key Features
+## 🕸️ FEATURES
 
-* **Extreme One-Knob Control:** Simultaneously controls Input Drive, Bit Reduction, and Hard Clipping.
-* **3-Stage LED Feedback System:**
-    * 🔴 **DRIVE:** Input gain boost initiates.
-    * 🔴 **CRUSH:** Bit-depth reduction kicks in (down to 3-bit).
-    * 🩸 **DIE:** Hard clipping + Full visual rage mode (Red Glow).
-* **Opium Aesthetic UI:** Minimalist "Pitch Black" design with high-contrast visibility.
-* **Auto-Gain Compensation:** Prevents ear damage by automatically balancing output volume.
+### **[ ONE KNOB CHAOS ]**
+A single control macros 3 stages of DSP processing. No presets, no confusion. Just turn it up to destroy.
 
-## 🎛️ Under the Hood (DSP Logic)
+### **[ VISUAL FEEDBACK ]**
+Reactive LED system indicating the level of signal degradation:
+* **⚪ DRIVE:** Signal Boost (+2000%)
+* **⚪ CRUSH:** Bit-Depth Reduction (16-bit → 3-bit)
+* **🔴 DIE:** Hard Clipping Limit reached (Total Distortion)
 
-The plugin processes audio through a rigorous 3-step chain based on the knob value (0% - 100%):
+### **[ AESTHETIC ]**
+* **PITCH BLACK** Background
+* **STARK WHITE** Controls
+* **BLOOD RED** Visuals on max capacity
 
-1.  **Extreme Drive (0% ~):**
-    * Input signal is boosted up to **20x (approx +26dB)**.
-2.  **Digital Decimation (40% ~):**
-    * Applies aggressive **Bit-crushing**.
-    * Resolution drops linearly from **16-bit down to 3-bit**, creating intense quantization noise.
-3.  **Hard Clipping (80% ~):**
-    * Signal is ruthlessly clamped between `-1.0` and `1.0`.
-    * Transforms sine waves into near-perfect **Square waves** for that signature "torn speaker" sound.
+## 🏴‍☠️ DSP ARCHITECTURE
 
-## 🚀 Installation & Usage
+The signal path is designed to mimic **digital data corruption**:
 
-### For Users
-1.  Download the `.vst3` file from the [Releases](../../releases) page.
-2.  Place the file in your VST3 folder:
-    * **Windows:** `C:\Program Files\Common Files\VST3`
-3.  Rescan plugins in your DAW (FL Studio, Ableton, etc.).
+| STAGE | PROCESS | EFFECT |
+| :--- | :--- | :--- |
+| **I** | **EXTREME GAIN** | Input signal amplified by **20x (+26dB)**. |
+| **II** | **DECIMATION** | Linearly reduces bit-depth down to **3-bits**. Introduces heavy quantization noise. |
+| **III** | **HARD CLIP** | Signal is aggressively clamped at **0dB**. Forces sine waves into square waves. |
 
-### For Developers (Build)
-1.  Clone this repository.
-2.  Open `wxCrusher.jucer` with **Projucer**.
-3.  Select your exporter (Visual Studio 2022/2026 or Xcode).
-4.  Save and open in IDE.
-5.  Build in **Release** mode.
+## 🦇 INSTALLATION
 
-## 🛠 Tech Stack
+### USERS
+1.  Grab the latest **`.vst3`** from [**Releases**](../../releases).
+2.  Drop it into your VST3 directory:
+    * `C:\Program Files\Common Files\VST3`
+3.  Rescan DAW.
 
-* **Language:** C++
-* **Framework:** JUCE
-* **IDE:** Visual Studio 2026
-* **Platform:** Windows (VST3)
+### DEVELOPERS
+* **IDE:** Visual Studio 2026 / Xcode
+* **Framework:** JUCE 7+
+* **Standard:** C++17
 
 ---
-**Developed by wxxmin**
+
+### **★ ENGINEERED BY WXXMIN ★**
+*No copyright intended. Just pure noise.*
