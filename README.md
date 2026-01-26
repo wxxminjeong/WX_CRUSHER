@@ -15,6 +15,10 @@ One knob. Zero mercy.
 
 ## 🕸️ FEATURES
 
+https://github.com/user-attachments/assets/3e2a1a90-fa60-49c5-8214-3d9cd68a2afa
+
+
+
 ### **[ ONE KNOB CHAOS ]**
 A single control macros 3 stages of DSP processing. No presets, no confusion. Just turn it up to destroy.
 
