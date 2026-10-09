@@ -6,6 +6,11 @@ on:
     paths: [ 'Source/**', 'wxCrusher.jucer', '.github/**' ]
   workflow_dispatch:
 
+defaults:
+  run:
+    # bash 는 pluginval 이 끝날 때까지 기다리고 실패하면 단계를 실패로 만듭니다. (PowerShell 은 안 기다림)
+    shell: bash
+
 jobs:
   build:
     runs-on: windows-latest
@@ -25,15 +30,16 @@ jobs:
         run: cmake -S .github/ci -B build -A x64
 
       - name: Build
-        run: cmake --build build --config Release --target wxCrusher_VST3 --parallel
+        run: |
+          cmake --build build --config Release --target wxCrusher_VST3 --parallel 2>&1 | tee build.log
+          echo "---- MSVC warnings in Source/ ----"
+          grep -i "Source[\\/].*warning" build.log || echo "none"
 
       - name: Validate with pluginval
-        shell: pwsh
         run: |
-          Invoke-WebRequest https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip -OutFile pluginval.zip
-          Expand-Archive pluginval.zip -DestinationPath pluginval
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip
+          unzip -q pluginval.zip -d pluginval || 7z x -y -opluginval pluginval.zip
           ./pluginval/pluginval.exe --strictness-level 10 --validate "build/wxCrusher_artefacts/Release/VST3/wxCrusher.vst3"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Upload VST3
         uses: actions/upload-artifact@v4
