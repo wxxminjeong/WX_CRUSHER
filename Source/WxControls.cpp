@@ -65,7 +65,14 @@ void WxKnobModule::setActivity(float newActivity)
 {
     newActivity = juce::jlimit(0.0f, 1.0f, newActivity);
 
-    if (std::abs(newActivity - activity) > 0.01f)
+    // 아주 작은 값은 꺼짐으로 (CRUSH / DIE 와 같은 기준)
+    if (newActivity < 0.01f)
+        newActivity = 0.0f;
+
+    // 켜짐 ↔ 꺼짐이 바뀔 때는 아무리 작은 변화라도 꼭 반영해야 LED 가 켜진 채로 남지 않습니다.
+    const bool litChanged = (newActivity > 0.0f) != (activity > 0.0f);
+
+    if (litChanged || std::abs(newActivity - activity) > 0.01f)
     {
         activity = newActivity;
         repaint(getLocalBounds().removeFromBottom(footerHeight)); // LED 줄만 다시 그리기

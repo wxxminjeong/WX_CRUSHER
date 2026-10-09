@@ -605,7 +605,9 @@ void WxTransferCurve::paint(juce::Graphics& g)
 
         for (float level : { inputLevel, -inputLevel })
         {
-            const float y = juce::jlimit(-outputRange, outputRange, wx::processSample(level, settings));
+            // 출력이 화면 밖이어도 표시가 잘리지 않도록 안쪽에 붙입니다.
+            const float markerY = juce::jlimit(plot.getY() + 6.0f, plot.getBottom() - 6.0f,
+                                               toY(wx::processSample(level, settings)));
 
             if (isOffScale)
             {
@@ -613,7 +615,7 @@ void WxTransferCurve::paint(juce::Graphics& g)
                 const float direction = level > 0.0f ? 1.0f : -1.0f;
 
                 juce::Path arrow;
-                arrow.addTriangle(edgeX, toY(y), edgeX - direction * 9.0f, toY(y) - 6.0f, edgeX - direction * 9.0f, toY(y) + 6.0f);
+                arrow.addTriangle(edgeX, markerY, edgeX - direction * 9.0f, markerY - 6.0f, edgeX - direction * 9.0f, markerY + 6.0f);
                 g.setColour(Palette::red);
                 g.fillPath(arrow);
             }
@@ -622,7 +624,7 @@ void WxTransferCurve::paint(juce::Graphics& g)
                 g.setColour(Palette::red.withAlpha(0.35f));
                 g.drawVerticalLine(juce::roundToInt(toX(level)), plot.getY(), plot.getBottom());
                 g.setColour(Palette::red);
-                g.fillEllipse(juce::Rectangle<float>(7.0f, 7.0f).withCentre({ toX(level), toY(y) }));
+                g.fillEllipse(juce::Rectangle<float>(7.0f, 7.0f).withCentre({ toX(level), markerY }));
             }
         }
     }

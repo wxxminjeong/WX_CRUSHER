@@ -29,9 +29,7 @@ WxMainView::WxMainView(WxCrusherAudioProcessor& p)
     // 창을 열기 전에 쌓여 있던 오래된 샘플과 레벨은 버립니다.
     auto& tap = audioProcessor.visualTap;
     while (tap.pullSamples(pulledInput.data(), pulledOutput.data(), (int)pulledInput.size()) > 0) {}
-    tap.takeInputPeak();
-    tap.takeOutputPeak();
-    tap.takeClipAmount();
+    tap.clearLevels();
 
     setSize(baseWidth, baseHeight);
     startTimerHz(60);
@@ -71,33 +69,38 @@ void WxMainView::timerCallback()
     lastBlockCount = blockCount;
     framesWithoutAudio = hasNewAudio ? 0 : framesWithoutAudio + 1;
 
-    if (hasNewAudio || framesWithoutAudio > 12)
+    if (hasNewAudio)
     {
-        const float inputPeak  = hasNewAudio ? tap.takeInputPeak() : 0.0f;
-        const float outputPeak = hasNewAudio ? tap.takeOutputPeak() : 0.0f;
-        const float clipRatio  = hasNewAudio ? tap.takeClipAmount() : 0.0f;
-        const float crushRatio = hasNewAudio ? tap.takeCrushAmount() : 0.0f;
-
-        inputMeter.setLevel(inputPeak);
-        outputMeter.setLevel(outputPeak);
-
-        // 확 켜지고, 천천히 꺼지는 엔벨로프
-        auto follow = [](float current, float target)
-        {
-            const float next = juce::jmax(target, current * 0.9f);
-            return next < 0.01f ? 0.0f : next;
-        };
-
-        inputLevel = juce::jmax(inputPeak, inputLevel * 0.92f);
-        if (inputLevel < 1.0e-3f)
-            inputLevel = 0.0f;
-
-        // DIE : 잘린 샘플이 있으면 확 켜짐
-        clipActivity = follow(clipActivity, clipRatio > 0.0f ? juce::jmin(1.0f, 0.45f + clipRatio * 2.0f) : 0.0f);
-
-        // CRUSH : 바뀐 양 0.1% → 꺼짐, 1% → 1/3, 10% → 2/3, 100% → 최대
-        crushActivity = follow(crushActivity, crushRatio > 1.0e-3f ? juce::jlimit(0.0f, 1.0f, std::log10(crushRatio * 1000.0f) / 3.0f) : 0.0f);
+        heldInputPeak  = tap.takeInputPeak();
+        heldOutputPeak = tap.takeOutputPeak();
+        heldClipRatio  = tap.takeClipAmount();
+        heldCrushRatio = tap.takeCrushAmount();
     }
+    else if (framesWithoutAudio > 12)
+    {
+        heldInputPeak = heldOutputPeak = heldClipRatio = heldCrushRatio = 0.0f;
+    }
+
+    // 떨어지는 속도는 블록이 아니라 화면 프레임 기준 (버퍼 크기와 상관없이 같은 속도)
+    inputMeter.setLevel(heldInputPeak);
+    outputMeter.setLevel(heldOutputPeak);
+
+    // 확 켜지고, 천천히 꺼지는 엔벨로프
+    auto follow = [](float current, float target)
+    {
+        const float next = juce::jmax(target, current * 0.9f);
+        return next < 0.01f ? 0.0f : next;
+    };
+
+    inputLevel = juce::jmax(heldInputPeak, inputLevel * 0.92f);
+    if (inputLevel < 1.0e-3f)
+        inputLevel = 0.0f;
+
+    // DIE : 잘린 샘플이 있으면 확 켜짐
+    clipActivity = follow(clipActivity, heldClipRatio > 0.0f ? juce::jmin(1.0f, 0.45f + heldClipRatio * 2.0f) : 0.0f);
+
+    // CRUSH : 바뀐 양 0.1% → 꺼짐, 1% → 1/3, 10% → 2/3, 100% → 최대
+    crushActivity = follow(crushActivity, heldCrushRatio > 1.0e-3f ? juce::jlimit(0.0f, 1.0f, std::log10(heldCrushRatio * 1000.0f) / 3.0f) : 0.0f);
 
     // 소리가 들어오고 있는 정도 (-60dB 이하 = 0, -30dB 이상 = 1)
     const float presence = juce::jlimit(0.0f, 1.0f, (juce::Decibels::gainToDecibels(inputLevel, -100.0f) + 60.0f) / 30.0f);

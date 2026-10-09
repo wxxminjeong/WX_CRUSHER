@@ -64,6 +64,15 @@ public:
     float takeClipAmount() noexcept { return clipAmount.exchange(0.0f); }
     float takeCrushAmount() noexcept { return crushAmount.exchange(0.0f); }
 
+    // [화면 스레드] 쌓여 있던 레벨 정보를 전부 버립니다. (창을 새로 열 때)
+    void clearLevels() noexcept
+    {
+        takeInputPeak();
+        takeOutputPeak();
+        takeClipAmount();
+        takeCrushAmount();
+    }
+
     // [화면 스레드] 지금까지 처리된 블록 수 - 화면 프레임 사이에 새 오디오가 왔는지 확인용
     uint32_t getBlockCount() const noexcept { return blockCount.load(); }
 
