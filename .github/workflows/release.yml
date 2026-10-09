@@ -1,0 +1,46 @@
+name: Publish release v0.2
+
+# 한 번만 쓰는 작업: 검증이 끝난 Windows 빌드(Build Windows VST3 run #2)를 v0.2 릴리스에 올립니다.
+on:
+  push:
+    branches: [ 'claude/**' ]
+    paths: [ '.github/workflows/release.yml', '.github/release-notes.md' ]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download the validated Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: wxCrusher-VST3-Windows
+          run-id: 37977371628
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: dl
+
+      - name: Package
+        run: |
+          find dl -type f
+          cd dl && zip -r ../wxCrusher-v0.2-Windows-VST3.zip wxCrusher.vst3
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v0.2 > /dev/null 2>&1; then
+            echo "v0.2 already exists - nothing to do"
+            exit 0
+          fi
+          gh release create v0.2 wxCrusher-v0.2-Windows-VST3.zip \
+            --target 1e456bdf41f9c314de11d864b673f437232c3e01 \
+            --title "WX_CRUSHER_v0.2" \
+            --notes-file .github/release-notes.md \
+            --latest
