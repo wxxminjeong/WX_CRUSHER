@@ -177,6 +177,10 @@ WxCrusherAudioProcessorEditor::WxCrusherAudioProcessorEditor(WxCrusherAudioProce
 {
     addAndMakeVisible(mainView);
 
+    // 지난번 창 크기는 제일 먼저 읽어둡니다.
+    // (아래 setResizeLimits 가 바로 resized() 를 불러 editorWidth 를 덮어쓰기 때문)
+    int width = audioProcessor.editorWidth.load();
+
     // 창 크기 조절 (비율 고정, 75% ~ 160%)
     constexpr double aspectRatio = (double)WxMainView::baseWidth / (double)WxMainView::baseHeight;
     const int minWidth = WxMainView::baseWidth * 3 / 4;
@@ -186,8 +190,7 @@ WxCrusherAudioProcessorEditor::WxCrusherAudioProcessorEditor(WxCrusherAudioProce
     setResizeLimits(minWidth, juce::roundToInt(minWidth / aspectRatio), maxWidth, juce::roundToInt(maxWidth / aspectRatio));
     getConstrainer()->setFixedAspectRatio(aspectRatio);
 
-    // 지난번에 쓰던 창 크기로 열기
-    int width = audioProcessor.editorWidth.load();
+    // 지난번에 쓰던 창 크기로 열기 (처음이면 100%)
     if (width < minWidth || width > maxWidth)
         width = WxMainView::baseWidth;
 
