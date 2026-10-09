@@ -44,6 +44,7 @@ private:
     juce::String numeral, title, caption;
     bool hasPowerButton;
     float activity = 0.0f;
+    int framesBelowThreshold = 0;   // LED 가 꺼짐 기준 아래에 머문 프레임 수
 
     juce::Slider knob;
     juce::ToggleButton powerButton;

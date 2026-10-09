@@ -605,8 +605,9 @@ void WxTransferCurve::paint(juce::Graphics& g)
 
         for (float level : { inputLevel, -inputLevel })
         {
-            // 출력이 화면 밖이어도 표시가 잘리지 않도록 안쪽에 붙입니다.
-            const float markerY = juce::jlimit(plot.getY() + 6.0f, plot.getBottom() - 6.0f,
+            // 출력이 화면 밖이어도 표시가 잘리지 않도록 안쪽에 붙입니다. (화살표 반높이 6px / 점 반지름 3.5px)
+            const float margin = isOffScale ? 6.0f : 3.5f;
+            const float markerY = juce::jlimit(plot.getY() + margin, plot.getBottom() - margin,
                                                toY(wx::processSample(level, settings)));
 
             if (isOffScale)

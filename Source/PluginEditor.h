@@ -53,8 +53,7 @@ private:
 
     std::vector<float> pulledInput, pulledOutput;
 
-    uint32_t lastBlockCount = 0;   // 오디오 스레드가 처리한 블록 수 (새 오디오가 왔는지 확인용)
-    int framesWithoutAudio = 0;
+    int framesWithoutAudio = 0;    // 새 오디오 블록 없이 지나간 화면 프레임 수
 
     // 마지막으로 받은 블록의 레벨 (다음 블록이 올 때까지 유지)
     float heldInputPeak = 0.0f, heldOutputPeak = 0.0f, heldClipRatio = 0.0f, heldCrushRatio = 0.0f;

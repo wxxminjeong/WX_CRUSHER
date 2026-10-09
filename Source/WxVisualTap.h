@@ -43,7 +43,6 @@ public:
         storeMax(outputPeakLevel, outputPeak);
         storeMax(clipAmount, clipRatio);
         storeMax(crushAmount, crushRatio);
-        blockCount.fetch_add(1);
     }
 
     //==============================================================================
@@ -58,11 +57,15 @@ public:
         return scope.blockSize1 + scope.blockSize2;
     }
 
-    // [화면 스레드] 마지막으로 읽은 뒤의 최대값을 가져오고 0으로 비웁니다.
-    float takeInputPeak() noexcept  { return inputPeakLevel.exchange(0.0f); }
-    float takeOutputPeak() noexcept { return outputPeakLevel.exchange(0.0f); }
-    float takeClipAmount() noexcept { return clipAmount.exchange(0.0f); }
-    float takeCrushAmount() noexcept { return crushAmount.exchange(0.0f); }
+    // [화면 스레드] 마지막으로 읽은 뒤의 최대값을 가져오고 비웁니다.
+    //   그 사이에 오디오 블록이 하나도 없었으면 noNewBlock(-1) 을 돌려줍니다.
+    //   (값과 "새 블록이 왔는가" 를 같은 atomic 하나에 담아야 둘이 어긋나지 않습니다.)
+    static constexpr float noNewBlock = -1.0f;
+
+    float takeInputPeak() noexcept  { return inputPeakLevel.exchange(noNewBlock); }
+    float takeOutputPeak() noexcept { return outputPeakLevel.exchange(noNewBlock); }
+    float takeClipAmount() noexcept { return clipAmount.exchange(noNewBlock); }
+    float takeCrushAmount() noexcept { return crushAmount.exchange(noNewBlock); }
 
     // [화면 스레드] 쌓여 있던 레벨 정보를 전부 버립니다. (창을 새로 열 때)
     void clearLevels() noexcept
@@ -73,8 +76,6 @@ public:
         takeCrushAmount();
     }
 
-    // [화면 스레드] 지금까지 처리된 블록 수 - 화면 프레임 사이에 새 오디오가 왔는지 확인용
-    uint32_t getBlockCount() const noexcept { return blockCount.load(); }
 
     // 스펙트럼의 주파수 눈금을 그리기 위한 샘플레이트
     std::atomic<double> sampleRate { 44100.0 };
@@ -107,8 +108,9 @@ private:
     juce::AbstractFifo fifo { capacity };
     std::vector<float> inputSamples, outputSamples;
 
-    std::atomic<float> inputPeakLevel { 0.0f }, outputPeakLevel { 0.0f }, clipAmount { 0.0f }, crushAmount { 0.0f };
-    std::atomic<uint32_t> blockCount { 0 };
+    // 모든 값은 0 이상이라, noNewBlock(-1) 은 다음 블록이 오면 바로 덮어써집니다.
+    std::atomic<float> inputPeakLevel { noNewBlock }, outputPeakLevel { noNewBlock },
+                       clipAmount { noNewBlock }, crushAmount { noNewBlock };
 
     JUCE_DECLARE_NON_COPYABLE(WxVisualTap)
 };

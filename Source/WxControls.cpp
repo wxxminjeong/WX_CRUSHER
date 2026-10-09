@@ -66,8 +66,18 @@ void WxKnobModule::setActivity(float newActivity)
     newActivity = juce::jlimit(0.0f, 1.0f, newActivity);
 
     // 아주 작은 값은 꺼짐으로 (CRUSH / DIE 와 같은 기준)
+    // 단, 켜져 있던 LED 는 0.2초 동안 계속 작아야 꺼집니다. (경계에서 깜빡이지 않도록)
     if (newActivity < 0.01f)
+    {
+        if (activity > 0.0f && ++framesBelowThreshold < 12)
+            return;
+
         newActivity = 0.0f;
+    }
+    else
+    {
+        framesBelowThreshold = 0;
+    }
 
     // 켜짐 ↔ 꺼짐이 바뀔 때는 아무리 작은 변화라도 꼭 반영해야 LED 가 켜진 채로 남지 않습니다.
     const bool litChanged = (newActivity > 0.0f) != (activity > 0.0f);

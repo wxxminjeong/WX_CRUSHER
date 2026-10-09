@@ -64,22 +64,23 @@ void WxMainView::timerCallback()
     // 2. 레벨 : 새 오디오 블록이 왔을 때만 갱신합니다.
     //    (버퍼가 큰 DAW 에서는 화면 한 프레임 동안 블록이 안 올 수도 있어서, 그때 0 으로 보면 미터가 깜빡입니다.)
     //    200ms 넘게 아무것도 안 오면 재생이 멈춘 것으로 보고 천천히 내립니다.
-    const auto blockCount = tap.getBlockCount();
-    const bool hasNewAudio = blockCount != lastBlockCount;
-    lastBlockCount = blockCount;
+    auto takeIfNew = [](float taken, float& held)
+    {
+        if (taken >= 0.0f) // WxVisualTap::noNewBlock(-1) 이면 이전 값 유지
+            held = taken;
+
+        return taken >= 0.0f;
+    };
+
+    const bool hasNewAudio = takeIfNew(tap.takeInputPeak(), heldInputPeak);
+    takeIfNew(tap.takeOutputPeak(), heldOutputPeak);
+    takeIfNew(tap.takeClipAmount(), heldClipRatio);
+    takeIfNew(tap.takeCrushAmount(), heldCrushRatio);
+
     framesWithoutAudio = hasNewAudio ? 0 : framesWithoutAudio + 1;
 
-    if (hasNewAudio)
-    {
-        heldInputPeak  = tap.takeInputPeak();
-        heldOutputPeak = tap.takeOutputPeak();
-        heldClipRatio  = tap.takeClipAmount();
-        heldCrushRatio = tap.takeCrushAmount();
-    }
-    else if (framesWithoutAudio > 12)
-    {
+    if (framesWithoutAudio > 12)
         heldInputPeak = heldOutputPeak = heldClipRatio = heldCrushRatio = 0.0f;
-    }
 
     // 떨어지는 속도는 블록이 아니라 화면 프레임 기준 (버퍼 크기와 상관없이 같은 속도)
     inputMeter.setLevel(heldInputPeak);
