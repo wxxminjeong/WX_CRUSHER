@@ -6,54 +6,77 @@
 
 > **"TOTAL SONIC ANNIHILATION."**
 
-**WX CRUSHER** is a high-gain, digital distortion engine engineered for **Rage, Digicore, and Dark Trap** production.
+**WX CRUSHER** is a suite of digital distortion plugins engineered for **Rage, Digicore, and Dark Trap** production.
 Abandoning analog warmth for digital coldness, it forces any signal into a ruthlessly hard-clipped square wave.
 
-One knob. Zero mercy.
+Every stage of the old one-knob engine is now **its own VST3**.
+Chain them, reorder them, automate them separately.
 
-![Plugin UI](./screenshot.png)
+Three plugins. Zero mercy.
 
 https://github.com/user-attachments/assets/1ff514e6-a1e2-47ea-90b7-d61829fa6f78
 
+<sub>▲ v0.1 (one-knob version) demo</sub>
 
-## 🕸️ FEATURES
 
-### **[ ONE KNOB CHAOS ]**
-A single control macros 3 stages of DSP processing. No presets, no confusion. Just turn it up to destroy.
+## 🕸️ THE SUITE
+
+| PLUGIN | KNOB | RANGE | EFFECT |
+| :--- | :--- | :--- | :--- |
+| **WX DRIVE** | DRIVE | **0 → +26 dB** (×1 → ×20) | Extreme gain. No clipping inside — that's DIE's job. |
+| **WX CRUSH** | BITS | **16 → 1 bit** | Bit-depth reduction. Heavy quantization noise. 16 bit = untouched. |
+| **WX DIE** | CEILING | **0 → -24 dB** | Hard clip at the ceiling. Forces sine waves into square waves. |
+
+Every knob works the same way: **turn right = more destruction.**
 
 ### **[ VISUAL FEEDBACK ]**
-Reactive LED system indicating the level of signal degradation:
-* **⚪ DRIVE:** Signal Boost (+2000%)
-* **⚪ CRUSH:** Bit-Depth Reduction (16-bit → 3-bit)
-* **🔴 DIE:** Hard Clipping Limit reached (Total Distortion)
+* **⚪ LED:** Lights up the moment the knob leaves its clean position
+* **🔴 GLOW:** Blood red background past **80%**
 
 ### **[ AESTHETIC ]**
 * **PITCH BLACK** Background
 * **STARK WHITE** Controls
 * **BLOOD RED** Visuals on max capacity
 
-## 🏴‍☠️ DSP ARCHITECTURE
+## 🏴‍☠️ THE ORIGINAL CHAIN
 
-The signal path is designed to mimic **digital data corruption**:
+The v0.1 one-knob engine, rebuilt from the separate plugins:
 
-| STAGE | PROCESS | EFFECT |
+```
+WX DRIVE  →  WX CRUSH  →  WX DIE
+ +26 dB       3 bit        0 dB
+```
+
+| STAGE | PLUGIN | PROCESS |
 | :--- | :--- | :--- |
-| **I** | **EXTREME GAIN** | Input signal amplified by **20x (+26dB)**. |
-| **II** | **DECIMATION** | Linearly reduces bit-depth down to **3-bits**. Introduces heavy quantization noise. |
-| **III** | **HARD CLIP** | Signal is aggressively clamped at **0dB**. Forces sine waves into square waves. |
+| **I** | **WX DRIVE** | Input signal amplified by up to **20x (+26dB)**. |
+| **II** | **WX CRUSH** | Bit-depth reduced down to **1 bit**. Introduces heavy quantization noise. |
+| **III** | **WX DIE** | Signal is aggressively clamped at the **ceiling**. |
+
+> v0.1 also trimmed the output by -1.9 dB (×0.8) after clipping. Pull the fader down by 1.9 dB to match it exactly.
 
 ## 🦇 INSTALLATION
 
 ### USERS
-1.  Grab the latest **`.vst3`** from [**Releases**](../../releases).
-2.  Drop it into your VST3 directory:
+1.  Grab **`wxDrive.vst3`**, **`wxCrush.vst3`**, **`wxDie.vst3`** from [**Releases**](../../releases).
+2.  Drop them into your VST3 directory:
     * `C:\Program Files\Common Files\VST3`
-3.  Rescan DAW.
+3.  Rescan DAW. They show up under **wxxmin**.
 
 ### DEVELOPERS
 * **IDE:** Visual Studio 2026 / Xcode
-* **Framework:** JUCE 7+
+* **Framework:** JUCE 8
 * **Standard:** C++17
+
+```
+WxDrive/wxDrive.jucer   → WX DRIVE
+WxCrush/wxCrush.jucer   → WX CRUSH
+WxDie/wxDie.jucer       → WX DIE
+Shared/                 → processor base + UI shared by all three
+```
+
+Open each `.jucer` in Projucer → **Save and Open in IDE** → build.
+Each project has its own `Builds/` folder, so all three can be built side by side.
 
 ---
 
