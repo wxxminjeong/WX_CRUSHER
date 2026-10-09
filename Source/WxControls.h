@@ -38,6 +38,8 @@ public:
 private:
     void refreshStageLook();
 
+    static constexpr int footerHeight = 34; // 아래쪽 LED + 설명 줄
+
     juce::SharedResourcePointer<wx::Fonts> fonts;
     juce::String numeral, title, caption;
     bool hasPowerButton;

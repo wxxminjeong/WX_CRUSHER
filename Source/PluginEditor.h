@@ -52,9 +52,15 @@ private:
     WxKnobModule driveModule, crushModule, dieModule, mixModule, outputModule;
 
     std::vector<float> pulledInput, pulledOutput;
-    float clipActivity = 0.0f;   // DIE 에서 실제로 잘리고 있는 정도 (천천히 꺼짐)
-    float inputLevel = 0.0f;     // 전달 곡선에 표시할 입력 크기
-    float glow = 0.0f;           // 배경의 붉은 글로우
+
+    uint32_t lastBlockCount = 0;   // 오디오 스레드가 처리한 블록 수 (새 오디오가 왔는지 확인용)
+    int framesWithoutAudio = 0;
+
+    float inputLevel = 0.0f;       // 전달 곡선 / LED 에 쓰는 입력 크기 (천천히 꺼짐)
+    float crushActivity = 0.0f;    // CRUSH 가 실제로 소리를 바꾸는 정도 (천천히 꺼짐)
+    float clipActivity = 0.0f;     // DIE 에서 실제로 잘리고 있는 정도 (천천히 꺼짐)
+    float glowLevel = 0.0f;        // 배경 글로우 (부드럽게 따라감)
+    float glow = 0.0f;             // 지금 그려진 배경 글로우 (1/32 단계)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WxMainView)
 };

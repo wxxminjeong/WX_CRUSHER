@@ -35,11 +35,15 @@ public:
     }
 
     // [오디오 스레드] 블록 하나를 처리할 때마다 레벨 정보를 남깁니다.
-    void pushLevels(float inputPeak, float outputPeak, float clipRatio) noexcept
+    //   clipRatio  = DIE 에서 잘린 샘플 비율 (0 ~ 1)
+    //   crushRatio = CRUSH 가 바꾼 양 / 들어간 소리 크기
+    void pushLevels(float inputPeak, float outputPeak, float clipRatio, float crushRatio) noexcept
     {
         storeMax(inputPeakLevel, inputPeak);
         storeMax(outputPeakLevel, outputPeak);
         storeMax(clipAmount, clipRatio);
+        storeMax(crushAmount, crushRatio);
+        blockCount.fetch_add(1);
     }
 
     //==============================================================================
@@ -58,6 +62,10 @@ public:
     float takeInputPeak() noexcept  { return inputPeakLevel.exchange(0.0f); }
     float takeOutputPeak() noexcept { return outputPeakLevel.exchange(0.0f); }
     float takeClipAmount() noexcept { return clipAmount.exchange(0.0f); }
+    float takeCrushAmount() noexcept { return crushAmount.exchange(0.0f); }
+
+    // [화면 스레드] 지금까지 처리된 블록 수 - 화면 프레임 사이에 새 오디오가 왔는지 확인용
+    uint32_t getBlockCount() const noexcept { return blockCount.load(); }
 
     // 스펙트럼의 주파수 눈금을 그리기 위한 샘플레이트
     std::atomic<double> sampleRate { 44100.0 };
@@ -90,7 +98,8 @@ private:
     juce::AbstractFifo fifo { capacity };
     std::vector<float> inputSamples, outputSamples;
 
-    std::atomic<float> inputPeakLevel { 0.0f }, outputPeakLevel { 0.0f }, clipAmount { 0.0f };
+    std::atomic<float> inputPeakLevel { 0.0f }, outputPeakLevel { 0.0f }, clipAmount { 0.0f }, crushAmount { 0.0f };
+    std::atomic<uint32_t> blockCount { 0 };
 
     JUCE_DECLARE_NON_COPYABLE(WxVisualTap)
 };

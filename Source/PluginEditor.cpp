@@ -61,41 +61,76 @@ void WxMainView::timerCallback()
         display.pushSamples(pulledInput.data(), pulledOutput.data(), numPulled);
     }
 
-    // 2. 레벨 미터
-    const float inputPeak = tap.takeInputPeak();
-    inputMeter.setLevel(inputPeak);
-    outputMeter.setLevel(tap.takeOutputPeak());
+    const auto settings = audioProcessor.getCurrentSettings();
 
-    // 3. DIE 에서 실제로 잘리는 중이면 확 켜지고, 멈추면 천천히 꺼집니다.
-    const float clipRatio = tap.takeClipAmount();
-    const float clipTarget = clipRatio > 0.0f ? juce::jmin(1.0f, 0.45f + clipRatio * 2.0f) : 0.0f;
-    clipActivity = juce::jmax(clipTarget, clipActivity * 0.9f);
-    if (clipActivity < 0.01f)
-        clipActivity = 0.0f;
+    // 2. 레벨 : 새 오디오 블록이 왔을 때만 갱신합니다.
+    //    (버퍼가 큰 DAW 에서는 화면 한 프레임 동안 블록이 안 올 수도 있어서, 그때 0 으로 보면 미터가 깜빡입니다.)
+    //    200ms 넘게 아무것도 안 오면 재생이 멈춘 것으로 보고 천천히 내립니다.
+    const auto blockCount = tap.getBlockCount();
+    const bool hasNewAudio = blockCount != lastBlockCount;
+    lastBlockCount = blockCount;
+    framesWithoutAudio = hasNewAudio ? 0 : framesWithoutAudio + 1;
 
-    display.setClipActivity(clipActivity);
+    if (hasNewAudio || framesWithoutAudio > 12)
+    {
+        const float inputPeak  = hasNewAudio ? tap.takeInputPeak() : 0.0f;
+        const float outputPeak = hasNewAudio ? tap.takeOutputPeak() : 0.0f;
+        const float clipRatio  = hasNewAudio ? tap.takeClipAmount() : 0.0f;
+        const float crushRatio = hasNewAudio ? tap.takeCrushAmount() : 0.0f;
+
+        inputMeter.setLevel(inputPeak);
+        outputMeter.setLevel(outputPeak);
+
+        // 확 켜지고, 천천히 꺼지는 엔벨로프
+        auto follow = [](float current, float target)
+        {
+            const float next = juce::jmax(target, current * 0.9f);
+            return next < 0.01f ? 0.0f : next;
+        };
+
+        inputLevel = juce::jmax(inputPeak, inputLevel * 0.92f);
+        if (inputLevel < 1.0e-3f)
+            inputLevel = 0.0f;
+
+        // DIE : 잘린 샘플이 있으면 확 켜짐
+        clipActivity = follow(clipActivity, clipRatio > 0.0f ? juce::jmin(1.0f, 0.45f + clipRatio * 2.0f) : 0.0f);
+
+        // CRUSH : 바뀐 양 0.1% → 꺼짐, 1% → 1/3, 10% → 2/3, 100% → 최대
+        crushActivity = follow(crushActivity, crushRatio > 1.0e-3f ? juce::jlimit(0.0f, 1.0f, std::log10(crushRatio * 1000.0f) / 3.0f) : 0.0f);
+    }
+
+    // 소리가 들어오고 있는 정도 (-60dB 이하 = 0, -30dB 이상 = 1)
+    const float presence = juce::jlimit(0.0f, 1.0f, (juce::Decibels::gainToDecibels(inputLevel, -100.0f) + 60.0f) / 30.0f);
+
+    // 3. 파형 : 잘린 소리가 실제로 출력에 섞여 나갈 때만 빨갛게 (MIX 0% 면 안 보임)
+    display.setClipActivity(clipActivity * settings.mix);
     display.refresh();
 
     // 4. 전달 곡선 = 지금 노브 설정 + 지금 들어오는 소리 크기
-    const auto settings = audioProcessor.getCurrentSettings();
-    inputLevel = juce::jmax(inputPeak, inputLevel * 0.92f);
     transferCurve.setSettings(settings);
     transferCurve.setInputLevel(inputLevel);
 
-    // 5. 스테이지 LED : DRIVE / CRUSH 는 노브 양, DIE 는 실제로 잘리는 양
-    driveModule.setActivity(settings.driveOn > 0.5f ? driveModule.getKnobPosition() : 0.0f);
-    crushModule.setActivity(settings.crushOn > 0.5f ? crushModule.getKnobPosition() : 0.0f);
+    // 5. 💡 스테이지 LED = "이 스테이지가 지금 실제로 소리를 바꾸고 있는가"
+    //    DRIVE : 노브 양 x 소리가 있는지 / CRUSH : 실제로 바뀐 양 / DIE : 실제로 잘린 양
+    driveModule.setActivity(settings.driveOn > 0.5f ? driveModule.getKnobPosition() * presence : 0.0f);
+    crushModule.setActivity(settings.crushOn > 0.5f ? crushActivity : 0.0f);
     dieModule.setActivity(settings.dieOn > 0.5f ? clipActivity : 0.0f);
 
-    // 6. 🩸 배경 글로우 : 노브를 많이 돌릴수록 + 실제로 잘릴수록 붉게
+    // 6. 🩸 배경 글로우 : 소리가 나는 동안, 노브를 많이 돌릴수록 + 실제로 잘릴수록 붉게
     float destruction = 0.0f;
     for (auto* module : { &driveModule, &crushModule, &dieModule })
         if (module->isStageOn())
             destruction += module->getKnobPosition() / 3.0f;
 
-    const float newGlow = juce::jlimit(0.0f, 1.0f, 0.55f * destruction + 0.45f * clipActivity);
+    const float glowTarget = settings.mix * juce::jlimit(0.0f, 1.0f, 0.55f * destruction * presence + 0.45f * clipActivity);
+    glowLevel += (glowTarget - glowLevel) * (glowTarget > glowLevel ? 0.35f : 0.08f);
+    if (glowLevel < 0.005f)
+        glowLevel = 0.0f;
 
-    if (std::abs(newGlow - glow) > 0.02f || (newGlow <= 0.0f && glow > 0.0f))
+    // 화면 전체를 다시 그리는 건 비싸니까, 1/32 단계로 바뀔 때만 다시 그립니다.
+    const float newGlow = std::round(glowLevel * 32.0f) / 32.0f;
+
+    if (std::abs(newGlow - glow) > 0.001f)
     {
         glow = newGlow;
         repaint();
@@ -124,9 +159,9 @@ void WxMainView::paint(juce::Graphics& g)
     g.setFont(fonts->display(44.0f));
     g.drawText("WX CRUSHER", 22, 8, 300, 50, juce::Justification::centredLeft, false);
 
-    g.setFont(fonts->mono(11.0f));
+    g.setFont(fonts->mono(13.0f));
     g.setColour(Palette::red);
-    g.drawText("DRIVE / CRUSH / DIE", 232, 26, 200, 20, juce::Justification::centredLeft, false);
+    g.drawText("DRIVE / CRUSH / DIE", 232, 26, 240, 20, juce::Justification::centredLeft, false);
 
     // ✍️ Signature (wxxmin)
     g.setColour(Palette::dim);

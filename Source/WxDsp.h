@@ -78,9 +78,17 @@ namespace wx
         float outputGain = 1.0f;      // 배수
     };
 
+    // 📺 각 스테이지가 "지금 실제로 얼마나 일하고 있는지" 모으는 곳 (화면의 LED 용)
+    struct StageActivity
+    {
+        float crushChange = 0.0f;  // CRUSH 가 바꾼 양의 합
+        float crushInput  = 0.0f;  // CRUSH 에 들어간 소리 크기의 합
+        int clippedSamples = 0;    // DIE 에서 잘린 샘플 수
+    };
+
     // DRIVE → CRUSH → DIE → MIX → OUTPUT
-    // isClipping 이 주어지면 DIE 에서 실제로 잘렸는지 알려줍니다. (화면의 DIE LED 용)
-    inline float processSample(float input, const Settings& s, bool* isClipping = nullptr) noexcept
+    // activity 가 주어지면 CRUSH / DIE 가 실제로 바꾼 양을 같이 모읍니다.
+    inline float processSample(float input, const Settings& s, StageActivity* activity = nullptr) noexcept
     {
         float wet = input;
 
@@ -88,12 +96,22 @@ namespace wx
             wet += s.driveOn * (drive(wet, s.driveGain) - wet);
 
         if (s.crushOn > 0.0f)
-            wet += s.crushOn * (crush(wet, s.bits) - wet);
+        {
+            const float change = s.crushOn * (crush(wet, s.bits) - wet);
+
+            if (activity != nullptr)
+            {
+                activity->crushChange += std::abs(change);
+                activity->crushInput += std::abs(wet);
+            }
+
+            wet += change;
+        }
 
         if (s.dieOn > 0.0f)
         {
-            if (isClipping != nullptr && std::abs(wet) > s.ceiling)
-                *isClipping = true;
+            if (activity != nullptr && std::abs(wet) > s.ceiling)
+                ++activity->clippedSamples;
 
             wet += s.dieOn * (die(wet, s.ceiling) - wet);
         }

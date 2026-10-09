@@ -53,26 +53,32 @@ public:
     WxSpectrumView();
 
     void pushSamples(const float* input, const float* output, int numSamples);
-    void setSampleRate(double newSampleRate) { sampleRate = newSampleRate; }
+    void setSampleRate(double newSampleRate);
 
     // 화면 타이머에서 한 프레임에 한 번 부릅니다.
     void updateSpectrum();
 
+    // 탭을 다시 열 때 예전 피크가 남아 있지 않도록 비웁니다.
+    void clearPeaks();
+
     void paint(juce::Graphics&) override;
 
 private:
-    static constexpr int fftOrder = 12;
-    static constexpr int fftSize = 1 << fftOrder;
-    static constexpr int numBins = fftSize / 2;
     static constexpr float minDb = -96.0f, maxDb = 6.0f;
+
+    // 샘플레이트가 높을수록 FFT 를 크게 (저음 해상도를 비슷하게 유지)
+    void prepareFft(int newOrder);
 
     void analyse(const std::vector<float>& ring, std::vector<float>& smoothedDb);
     float frequencyToX(float frequency, float width) const;
     float dbToY(float db, juce::Rectangle<float> area) const;
     juce::Path makeSpectrumPath(const std::vector<float>& db, juce::Rectangle<float> area, bool closed) const;
 
-    juce::dsp::FFT fft { fftOrder };
-    juce::dsp::WindowingFunction<float> window { (size_t)fftSize, juce::dsp::WindowingFunction<float>::hann };
+    int fftOrder = 0, fftSize = 0, numBins = 0;
+    std::unique_ptr<juce::dsp::FFT> fft;
+
+    // normalise = false : 아래 4/N 보정이 '정규화하지 않은 해닝 창' 기준이기 때문
+    juce::dsp::WindowingFunction<float> window { 4096, juce::dsp::WindowingFunction<float>::hann, false };
 
     std::vector<float> inputRing, outputRing;
     int ringIndex = 0;
@@ -131,6 +137,9 @@ public:
 
 private:
     juce::Rectangle<float> getPlotArea() const;
+
+    // 🔍 DRIVE 를 올리면 재미있는 부분이 0 근처로 몰리므로, 입력 축을 2배씩 확대합니다.
+    float getInputRange() const;
 
     wx::Settings settings;
     float inputLevel = 0.0f;

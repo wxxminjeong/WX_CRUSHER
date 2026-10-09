@@ -5,6 +5,7 @@
 */
 
 #include "WxControls.h"
+#include "WxDsp.h"
 
 //==============================================================================
 WxKnobModule::WxKnobModule(juce::AudioProcessorValueTreeState& apvts,
@@ -24,12 +25,26 @@ WxKnobModule::WxKnobModule(juce::AudioProcessorValueTreeState& apvts,
     if (! hasPowerButton)
         knob.getProperties().set(wx::neverHotProperty, true);
 
+    // OUTPUT 은 0dB 를 기준으로 양쪽으로 아크를 그립니다.
+    if (valueID == wx::ParamID::output)
+        if (auto* parameter = apvts.getParameter(valueID))
+            knob.getProperties().set(wx::arcOriginProperty, (double)parameter->convertTo0to1(0.0f));
+
     addAndMakeVisible(knob);
     knobAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, valueID, knob);
 
     // 더블클릭하면 기본값으로 (어태치먼트가 범위를 정한 뒤에 설정해야 합니다)
     if (auto* parameter = apvts.getParameter(valueID))
         knob.setDoubleClickReturnValue(true, (double)parameter->convertFrom0to1(parameter->getDefaultValue()));
+
+    // 숫자 칸에 숫자가 아닌 걸 입력하면 (빈 칸, "off" ...) 지금 값을 그대로 둡니다.
+    knob.valueFromTextFunction = [this, parseText = knob.valueFromTextFunction](const juce::String& text)
+    {
+        if (parseText == nullptr || ! text.containsAnyOf("0123456789"))
+            return knob.getValue();
+
+        return parseText(text);
+    };
 
     knob.onValueChange = [this] { repaint(); };
 
@@ -53,7 +68,7 @@ void WxKnobModule::setActivity(float newActivity)
     if (std::abs(newActivity - activity) > 0.01f)
     {
         activity = newActivity;
-        repaint();
+        repaint(getLocalBounds().removeFromBottom(footerHeight)); // LED 줄만 다시 그리기
     }
 }
 
@@ -69,8 +84,10 @@ float WxKnobModule::getKnobPosition()
 
 void WxKnobModule::refreshStageLook()
 {
-    // 꺼진 스테이지는 어둡게
+    // 꺼진 스테이지는 어둡게 (노브도 빨갛게 변하지 않도록)
+    knob.getProperties().set(wx::stageOffProperty, ! isStageOn());
     knob.setAlpha(isStageOn() ? 1.0f : 0.3f);
+    knob.repaint();
     repaint();
 }
 
@@ -95,7 +112,7 @@ void WxKnobModule::paint(juce::Graphics& g)
     if (numeral.isNotEmpty())
     {
         g.setColour(isOn ? Palette::red : Palette::dim);
-        g.setFont(fonts->mono(12.0f));
+        g.setFont(fonts->mono(13.0f));
         g.drawText(numeral, header.removeFromLeft(26), juce::Justification::centredLeft, false);
     }
 
@@ -104,8 +121,8 @@ void WxKnobModule::paint(juce::Graphics& g)
     g.drawText(title, header, hasPowerButton ? juce::Justification::centredLeft : juce::Justification::centred, false);
 
     // LED + 설명
-    auto footer = getLocalBounds().removeFromBottom(34).reduced(14, 0);
-    g.setFont(fonts->mono(11.0f));
+    auto footer = getLocalBounds().removeFromBottom(footerHeight).reduced(14, 0);
+    g.setFont(fonts->mono(13.0f));
 
     if (hasPowerButton)
     {
@@ -122,7 +139,7 @@ void WxKnobModule::paint(juce::Graphics& g)
         g.fillEllipse(led);
 
         footer.removeFromLeft(16);
-        g.setColour(isOn ? Palette::dim : Palette::track);
+        g.setColour(isOn ? Palette::dim : Palette::dim.withAlpha(0.6f));
         g.drawText(caption, footer, juce::Justification::centredLeft, false);
     }
     else
@@ -136,7 +153,7 @@ void WxKnobModule::resized()
 {
     auto area = getLocalBounds();
     auto header = area.removeFromTop(40);
-    area.removeFromBottom(34);
+    area.removeFromBottom(footerHeight);
 
     if (hasPowerButton)
         powerButton.setBounds(header.removeFromRight(62).withSizeKeepingCentre(44, 20));

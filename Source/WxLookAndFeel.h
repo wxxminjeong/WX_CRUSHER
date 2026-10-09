@@ -28,8 +28,10 @@ namespace wx
     }
 
     //==============================================================================
-    // 이 속성이 붙은 노브는 끝까지 돌려도 빨갛게 변하지 않습니다. (MIX, OUTPUT)
-    inline const juce::Identifier neverHotProperty { "wxNeverHot" };
+    // 노브에 붙이는 표시들
+    inline const juce::Identifier neverHotProperty { "wxNeverHot" };  // 끝까지 돌려도 빨갛게 안 됨 (MIX, OUTPUT)
+    inline const juce::Identifier stageOffProperty { "wxStageOff" };  // 스테이지가 꺼져 있음 → 빨갛게 안 됨
+    inline const juce::Identifier arcOriginProperty { "wxArcOrigin" }; // 값 아크가 시작하는 위치 0~1 (OUTPUT 은 0dB 에서)
 
     //==============================================================================
     // 🔤 플러그인 안에 넣어둔 폰트 (어느 컴퓨터에서나 똑같이 보이도록)

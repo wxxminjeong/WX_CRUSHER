@@ -178,7 +178,7 @@ void WxCrusherAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
     int tapCount = 0;
 
     float inputPeak = 0.0f, outputPeak = 0.0f;
-    int clippedSamples = 0;
+    wx::StageActivity activity;
 
     wx::Settings settings;
 
@@ -194,13 +194,12 @@ void WxCrusherAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
         settings.mix        = mixSmoothed.getNextValue();
         settings.outputGain = outputGainSmoothed.getNextValue();
 
-        bool isClipping = false;
         float inputSum = 0.0f, outputSum = 0.0f;
 
         for (int channel = 0; channel < numChannels; ++channel)
         {
             const float inputSignal = channelData[channel][sample];
-            const float outputSignal = wx::processSample(inputSignal, settings, &isClipping);
+            const float outputSignal = wx::processSample(inputSignal, settings, &activity);
             channelData[channel][sample] = outputSignal;
 
             inputSum += inputSignal;
@@ -208,9 +207,6 @@ void WxCrusherAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
             inputPeak = juce::jmax(inputPeak, std::abs(inputSignal));
             outputPeak = juce::jmax(outputPeak, std::abs(outputSignal));
         }
-
-        if (isClipping)
-            ++clippedSamples;
 
         tapInput[tapCount] = inputSum * channelScale;
         tapOutput[tapCount] = outputSum * channelScale;
@@ -225,7 +221,13 @@ void WxCrusherAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
     if (tapCount > 0)
         visualTap.pushSamples(tapInput, tapOutput, tapCount);
 
-    visualTap.pushLevels(inputPeak, outputPeak, (float)clippedSamples / (float)numSamples);
+    // CRUSH 활동량은 소리가 거의 없을 때(평균 -80dB 미만)는 0 으로 봅니다.
+    const float crushRatio = activity.crushInput > 1.0e-4f * (float)(numSamples * numChannels)
+                                 ? activity.crushChange / activity.crushInput : 0.0f;
+
+    visualTap.pushLevels(inputPeak, outputPeak,
+                         (float)activity.clippedSamples / (float)(numSamples * numChannels),
+                         crushRatio);
 }
 
 //==============================================================================
@@ -286,6 +288,21 @@ juce::AudioProcessorValueTreeState::ParameterLayout WxCrusherAudioProcessor::cre
     auto oneDecimal = [](float value, int) { return juce::String(value, 1); };
     auto noDecimal = [](float value, int) { return juce::String(juce::roundToInt(value)); };
 
+    // 숫자를 직접 입력할 때: 숫자가 없거나("off", "nan", 빈 칸) 이상한 값이면 기본값으로
+    auto parseOr = [](float fallback)
+    {
+        return [fallback](const juce::String& text)
+        {
+            const auto trimmed = text.trim();
+
+            if (! trimmed.containsAnyOf("0123456789"))
+                return fallback;
+
+            const float value = trimmed.getFloatValue();
+            return std::isfinite(value) ? value : fallback;
+        };
+    };
+
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
     // --- I. DRIVE ---
@@ -296,7 +313,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout WxCrusherAudioProcessor::cre
         juce::ParameterID{ ParamID::drive, 1 }, "Drive",
         juce::NormalisableRange<float>(0.0f, maxDriveDb),  // 0 ~ +26dB (1배 ~ 20배)
         0.0f,
-        juce::AudioParameterFloatAttributes().withLabel("dB").withStringFromValueFunction(withSign)));
+        juce::AudioParameterFloatAttributes().withLabel("dB").withStringFromValueFunction(withSign)
+                                             .withValueFromStringFunction(parseOr(0.0f))));
 
     // --- II. CRUSH ---
     layout.add(std::make_unique<juce::AudioParameterBool>(
@@ -306,7 +324,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout WxCrusherAudioProcessor::cre
         juce::ParameterID{ ParamID::crush, 1 }, "Crush Bits",
         makeReversedRange(cleanBits, minBits),               // 노브 왼쪽 16bit → 오른쪽 1bit
         cleanBits,
-        juce::AudioParameterFloatAttributes().withLabel("bit").withStringFromValueFunction(oneDecimal)));
+        juce::AudioParameterFloatAttributes().withLabel("bit").withStringFromValueFunction(oneDecimal)
+                                             .withValueFromStringFunction(parseOr(cleanBits))));
 
     // --- III. DIE ---
     layout.add(std::make_unique<juce::AudioParameterBool>(
@@ -316,20 +335,23 @@ juce::AudioProcessorValueTreeState::ParameterLayout WxCrusherAudioProcessor::cre
         juce::ParameterID{ ParamID::die, 1 }, "Die Ceiling",
         makeReversedRange(0.0f, minCeilingDb),               // 노브 왼쪽 0dB → 오른쪽 -24dB
         0.0f,
-        juce::AudioParameterFloatAttributes().withLabel("dB").withStringFromValueFunction(withSign)));
+        juce::AudioParameterFloatAttributes().withLabel("dB").withStringFromValueFunction(withSign)
+                                             .withValueFromStringFunction(parseOr(0.0f))));
 
     // --- MIX / OUTPUT ---
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ ParamID::mix, 1 }, "Mix",
         juce::NormalisableRange<float>(0.0f, 100.0f),
         100.0f,
-        juce::AudioParameterFloatAttributes().withLabel("%").withStringFromValueFunction(noDecimal)));
+        juce::AudioParameterFloatAttributes().withLabel("%").withStringFromValueFunction(noDecimal)
+                                             .withValueFromStringFunction(parseOr(100.0f))));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID{ ParamID::output, 1 }, "Output",
         juce::NormalisableRange<float>(minOutputDb, maxOutputDb),
         0.0f,
-        juce::AudioParameterFloatAttributes().withLabel("dB").withStringFromValueFunction(withSign)));
+        juce::AudioParameterFloatAttributes().withLabel("dB").withStringFromValueFunction(withSign)
+                                             .withValueFromStringFunction(parseOr(0.0f))));
 
     return layout;
 }

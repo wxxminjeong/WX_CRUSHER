@@ -62,16 +62,26 @@ void WxLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width,
     const float lineWidth = juce::jmax(2.0f, radius * 0.09f);
     const float arcRadius = radius - lineWidth * 1.5f;
 
-    // 80% 를 넘으면 BLOOD RED (MIX / OUTPUT 처럼 '파괴'가 아닌 노브는 제외)
-    const bool isHot = sliderPos > 0.8f && ! slider.getProperties().contains(wx::neverHotProperty);
+    // 80% 를 넘으면 BLOOD RED (MIX / OUTPUT 처럼 '파괴'가 아닌 노브와 꺼진 스테이지는 제외)
+    const auto& properties = slider.getProperties();
+    const bool isHot = sliderPos > 0.8f
+                       && ! properties.contains(neverHotProperty)
+                       && ! (bool)properties.getWithDefault(stageOffProperty, false);
     const auto valueColour = isHot ? Palette::red : Palette::text;
+
+    // 값 아크는 보통 맨 왼쪽에서 시작하지만, OUTPUT 은 0dB 에서 양쪽으로 뻗습니다.
+    const float origin = (float)(double)properties.getWithDefault(arcOriginProperty, 0.0);
+    const float arcLow = juce::jmin(origin, sliderPos), arcHigh = juce::jmax(origin, sliderPos);
+    const bool hasArc = arcHigh - arcLow > 0.001f;
+    const float originAngle = startAngle + origin * (endAngle - startAngle);
 
     // 1. 눈금 (바깥쪽 작은 점 11개)
     for (int i = 0; i <= 10; ++i)
     {
-        const float tickAngle = startAngle + (float)i / 10.0f * (endAngle - startAngle);
+        const float position = (float)i / 10.0f;
+        const float tickAngle = startAngle + position * (endAngle - startAngle);
         const auto tick = centre.getPointOnCircumference(radius - lineWidth * 0.3f, tickAngle);
-        const bool isPassed = (float)i / 10.0f <= sliderPos + 0.001f && sliderPos > 0.0f;
+        const bool isPassed = hasArc && position >= arcLow - 0.001f && position <= arcHigh + 0.001f;
         g.setColour(isPassed ? valueColour.withAlpha(0.8f) : Palette::track);
         g.fillEllipse(juce::Rectangle<float>(lineWidth * 0.45f, lineWidth * 0.45f).withCentre(tick));
     }
@@ -83,10 +93,19 @@ void WxLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width,
     g.strokePath(track, juce::PathStrokeType(lineWidth, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
     // 3. 값 아크 (+ 빨갛게 번지는 글로우)
-    if (sliderPos > 0.0f)
+    if (origin > 0.0f)
+    {
+        // 기준점 (OUTPUT 0dB) 표시
+        g.setColour(Palette::dim);
+        g.fillEllipse(juce::Rectangle<float>(lineWidth * 0.7f, lineWidth * 0.7f)
+                          .withCentre(centre.getPointOnCircumference(arcRadius + lineWidth * 1.1f, originAngle)));
+    }
+
+    if (hasArc)
     {
         juce::Path valueArc;
-        valueArc.addCentredArc(centre.x, centre.y, arcRadius, arcRadius, 0.0f, startAngle, toAngle, true);
+        valueArc.addCentredArc(centre.x, centre.y, arcRadius, arcRadius, 0.0f,
+                               juce::jmin(originAngle, toAngle), juce::jmax(originAngle, toAngle), true);
 
         if (isHot)
         {
@@ -148,7 +167,7 @@ void WxLookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& butt
     }
 
     g.setColour(isOn ? Palette::background : (isHighlighted ? Palette::text : Palette::dim));
-    g.setFont(fonts->mono(bounds.getHeight() * 0.62f));
+    g.setFont(fonts->mono(bounds.getHeight() * 0.72f));
     g.drawText(isOn ? "ON" : "OFF", bounds, juce::Justification::centred, false);
 }
 
@@ -170,7 +189,7 @@ void WxLookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button, 
     using namespace wx;
 
     g.setColour(button.getToggleState() ? Palette::text : (isHighlighted ? Palette::text.withAlpha(0.7f) : Palette::dim));
-    g.setFont(fonts->mono((float)button.getHeight() * 0.5f));
+    g.setFont(fonts->mono((float)button.getHeight() * 0.6f));
     g.drawText(button.getButtonText(), button.getLocalBounds(), juce::Justification::centred, false);
 }
 
