@@ -1,85 +1,81 @@
-# ★ WX CRUSHER ★
+# WX CRUSHER
 
-![C++](https://img.shields.io/badge/C++-17-000000.svg?style=flat&logo=c%2B%2B&logoColor=white)
-![JUCE](https://img.shields.io/badge/JUCE-FRAMEWORK-000000.svg?style=flat&logo=juce&logoColor=white)
-![VST3](https://img.shields.io/badge/VST3-COMPATIBLE-000000.svg?style=flat)
+A digital distortion plugin (VST3) with three stages you can control separately: **Drive**, **Bitcrush** and **Clipper**.
+Built with JUCE.
 
-> **"TOTAL SONIC ANNIHILATION."**
+![WX CRUSHER](./screenshot.png)
 
-**WX CRUSHER** is a high-gain, digital distortion engine engineered for **Rage, Digicore, and Dark Trap** production.
-Abandoning analog warmth for digital coldness, it forces any signal into a ruthlessly hard-clipped square wave.
-
-Three stages. Full control. Zero mercy.
-
-![Plugin UI](./screenshot.png)
-
-https://github.com/user-attachments/assets/1ff514e6-a1e2-47ea-90b7-d61829fa6f78
-
-<sub>▲ v0.1 (one-knob version) demo</sub>
-
-
-## 🕸️ SIGNAL CHAIN
+## Signal chain
 
 ```
-INPUT → I. DRIVE → II. CRUSH → III. DIE → MIX → OUTPUT
+Input → Drive → Bitcrush → Clipper → Mix → Output
 ```
 
-| STAGE | KNOB | RANGE | EFFECT |
+## Controls
+
+| Section | Knob | Range | What it does |
 | :--- | :--- | :--- | :--- |
-| **I. DRIVE** | GAIN | **0 → +26 dB** (×1 → ×20) | Extreme input gain. |
-| **II. CRUSH** | BIT DEPTH | **16 → 1 bit** | Bit-depth reduction. Heavy quantization noise. 16 bit = untouched. |
-| **III. DIE** | CEILING | **0 → −24 dB** | Hard clip at the ceiling. Forces sine waves into square waves. |
-| MIX | DRY / WET | 0 → 100 % | Blend the destroyed signal with the clean one. |
-| OUTPUT | LEVEL | −24 → +12 dB | Final level. |
+| Drive | Gain | 0 to +26 dB | Boosts the input level. The more gain, the harder the signal hits the clipper. |
+| Bitcrush | Bit depth | 16 to 1 bit | Lowers the bit resolution and adds stepped, gritty noise. 16 bit leaves the sound unchanged. |
+| Clipper | Ceiling | 0 to −24 dB | Cuts off everything above the ceiling (hard clipping), turning peaks into flat tops. A lower ceiling clips more and makes the output quieter. |
+| Mix | Dry / wet | 0 to 100 % | Blends the original signal with the processed one. |
+| Output | Level | −24 to +12 dB | Final output level. |
 
-* Every stage has its own **ON / OFF** switch.
-* Every stage knob works the same way: **turn right = more destruction.**
-* Knob moves and ON / OFF switches are smoothed — no clicks, safe to automate.
+- Drive, Bitcrush and Clipper each have an **ON / OFF** button.
+- On the three stage knobs, turning right always means more effect. For Bitcrush and Clipper the number goes *down* as you turn right.
+- Knob changes and ON / OFF are smoothed, so automation and switching don't click.
 
-## 📺 VISUAL FEEDBACK
+## Display
 
-* **WAVE** — Oscilloscope. Input (grey ghost) vs output (white). Bleeds **red** while DIE is clipping.
-* **SPECTRUM** — Input vs output spectrum. Watch the harmonics pile up.
-* **TRANSFER** — The input → output curve of your current settings. The red area is how far it is from clean; the red dots show where the incoming signal hits the curve right now.
-* **IN / OUT** — Peak meters with peak hold.
-* **LEDs** — DRIVE / CRUSH glow with their knob amount. DIE only lights up when it is *actually* clipping.
-* **BLOOD RED** glow behind everything, following how hard the signal is being destroyed.
+- **WAVE** – Oscilloscope. Grey is the input, white is the output. The output turns red while the clipper is clipping.
+- **SPECTRUM** – Frequency spectrum of the input (grey) and output (white). Shows the harmonics the distortion adds.
+- **TRANSFER** – How the current settings turn input level into output level. The dashed diagonal is the unprocessed signal and the red area is the difference. Red dots show the current input level. With high Drive the input axis zooms in; the zoom is shown in the top-right corner.
+- **IN / OUT** – Peak meters with peak hold.
+- **LEDs** under each stage light up while that stage is actually changing the signal.
 
-### **[ HANDLING ]**
-* Double-click a knob to reset it. Click the number to type a value.
-* Drag the corner to resize (75 % – 160 %). Size and view are saved with your project.
+## Usage
 
-### **[ v0.1 SOUND ]**
-The old one-knob version at 100 % = **DRIVE +26 dB → CRUSH 3 bit → DIE 0 dB → OUTPUT −1.9 dB**.
+1. Insert WX CRUSHER on a track.
+2. Turn up **Drive**. With the Clipper on at 0 dB, the loud parts start to get clipped flat.
+3. Turn **Bitcrush** to the right for grit.
+4. Lower the **Clipper** ceiling for more clipping, or turn it off to hear Drive and Bitcrush alone.
+5. Use **Mix** to bring back some of the clean signal and **Output** to match the level.
 
-## 🦇 INSTALLATION
+Tips:
 
-### USERS
-1.  Grab the latest **`.vst3`** from [**Releases**](../../releases).
-2.  Drop it into your VST3 directory:
-    * `C:\Program Files\Common Files\VST3`
-3.  Rescan DAW.
+- Double-click a knob to reset it. Click the value under a knob to type a number.
+- Drag the bottom-right corner to resize the window (75 % to 160 %).
+- Knob values, the selected display and the window size are saved with your DAW project.
+- With the Clipper off and Drive up, the output can be up to 26 dB louder than the input. Turn down Output.
+- The sound of v0.1 (the old one-knob version at 100 %): Drive +26 dB, Bitcrush 3 bit, Clipper 0 dB, Output −1.9 dB. [v0.1 demo video](https://github.com/user-attachments/assets/1ff514e6-a1e2-47ea-90b7-d61829fa6f78)
 
-### DEVELOPERS
-* **IDE:** Visual Studio 2026 / Xcode
-* **Framework:** JUCE 8
-* **Standard:** C++17
+## Installation
 
-Open `wxCrusher.jucer` in Projucer → **Save and Open in IDE** → build.
+1. Download `wxCrusher.vst3` from [Releases](../../releases).
+2. Copy it to `C:\Program Files\Common Files\VST3`.
+3. Rescan plugins in your DAW.
 
-| FILE | ROLE |
+## Building from source
+
+Requirements: JUCE 8 (Projucer), Visual Studio 2026 or Xcode, C++17.
+
+1. Open `wxCrusher.jucer` in Projucer.
+2. If Projucer can't find the JUCE modules, set the module path in the exporter settings to your JUCE `modules` folder.
+3. Click **Save and Open in IDE** and build the Release configuration.
+   With Visual Studio the plugin ends up in `Builds/VisualStudio2026/x64/Release/VST3/`.
+
+| File | Contents |
 | :--- | :--- |
-| `PluginProcessor` | Parameters, smoothing, audio processing |
-| `WxDsp.h` | The three stage formulas (shared by the audio and the TRANSFER display) |
-| `WxVisualTap.h` | Lock-free audio → screen data path |
-| `PluginEditor` | Main layout, 60 fps update loop |
-| `WxControls` | Stage module (title, ON / OFF, knob, LED) |
-| `WxDisplays` | WAVE / SPECTRUM / TRANSFER / meters |
-| `WxLookAndFeel` | Colours, fonts, knob and button drawing |
+| `Source/PluginProcessor` | Parameters, smoothing, audio processing |
+| `Source/WxDsp.h` | Drive / Bitcrush / Clipper formulas (also used to draw TRANSFER) |
+| `Source/WxVisualTap.h` | Passes audio data to the display without locking the audio thread |
+| `Source/PluginEditor` | Window layout and the 60 fps display update |
+| `Source/WxControls` | Stage panel (title, ON / OFF, knob, LED) |
+| `Source/WxDisplays` | WAVE, SPECTRUM, TRANSFER and the meters |
+| `Source/WxLookAndFeel` | Colours, fonts, knob and button drawing |
 
-Fonts: [Anton](https://github.com/googlefonts/AntonFont) and [Space Mono](https://github.com/googlefonts/spacemono), embedded under the SIL Open Font License 1.1 (`Source/Fonts`).
+## Credits
 
----
+Made by wxxmin.
 
-### **★ ENGINEERED BY WXXMIN ★**
-*No copyright intended. Just pure noise.*
+Fonts: [Anton](https://github.com/googlefonts/AntonFont) and [Space Mono](https://github.com/googlefonts/spacemono), included under the SIL Open Font License 1.1 (`Source/Fonts`).

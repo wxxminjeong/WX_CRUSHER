@@ -21,8 +21,8 @@ WxCrusherAudioProcessor::WxCrusherAudioProcessor()
     driveParam   = apvts.getRawParameterValue(wx::ParamID::drive);
     crushOnParam = apvts.getRawParameterValue(wx::ParamID::crushOn);
     crushParam   = apvts.getRawParameterValue(wx::ParamID::crush);
-    dieOnParam   = apvts.getRawParameterValue(wx::ParamID::dieOn);
-    dieParam     = apvts.getRawParameterValue(wx::ParamID::die);
+    clipOnParam  = apvts.getRawParameterValue(wx::ParamID::clipOn);
+    clipParam    = apvts.getRawParameterValue(wx::ParamID::clip);
     mixParam     = apvts.getRawParameterValue(wx::ParamID::mix);
     outputParam  = apvts.getRawParameterValue(wx::ParamID::output);
 }
@@ -88,7 +88,7 @@ void WxCrusherAudioProcessor::prepareToPlay(double sampleRate, int)
     constexpr double rampSeconds = 0.03;
 
     for (auto* smoother : { &driveOnSmoothed, &driveGainSmoothed, &crushOnSmoothed, &bitsSmoothed,
-                            &dieOnSmoothed, &ceilingSmoothed, &mixSmoothed, &outputGainSmoothed })
+                            &clipOnSmoothed, &ceilingSmoothed, &mixSmoothed, &outputGainSmoothed })
         smoother->reset(sampleRate, rampSeconds);
 
     // 재생을 시작할 때는 램프 없이 바로 현재 노브 값에서 출발합니다.
@@ -97,7 +97,7 @@ void WxCrusherAudioProcessor::prepareToPlay(double sampleRate, int)
     driveGainSmoothed.setCurrentAndTargetValue(settings.driveGain);
     crushOnSmoothed.setCurrentAndTargetValue(settings.crushOn);
     bitsSmoothed.setCurrentAndTargetValue(settings.bits);
-    dieOnSmoothed.setCurrentAndTargetValue(settings.dieOn);
+    clipOnSmoothed.setCurrentAndTargetValue(settings.clipOn);
     ceilingSmoothed.setCurrentAndTargetValue(settings.ceiling);
     mixSmoothed.setCurrentAndTargetValue(settings.mix);
     outputGainSmoothed.setCurrentAndTargetValue(settings.outputGain);
@@ -127,8 +127,8 @@ wx::Settings WxCrusherAudioProcessor::getCurrentSettings() const noexcept
     s.driveGain  = juce::Decibels::decibelsToGain(driveParam->load());
     s.crushOn    = crushOnParam->load() >= 0.5f ? 1.0f : 0.0f;
     s.bits       = crushParam->load();
-    s.dieOn      = dieOnParam->load() >= 0.5f ? 1.0f : 0.0f;
-    s.ceiling    = juce::Decibels::decibelsToGain(dieParam->load());
+    s.clipOn     = clipOnParam->load() >= 0.5f ? 1.0f : 0.0f;
+    s.ceiling    = juce::Decibels::decibelsToGain(clipParam->load());
     s.mix        = mixParam->load() / 100.0f;
     s.outputGain = juce::Decibels::decibelsToGain(outputParam->load());
     return s;
@@ -141,7 +141,7 @@ void WxCrusherAudioProcessor::updateSmootherTargets() noexcept
     driveGainSmoothed.setTargetValue(settings.driveGain);
     crushOnSmoothed.setTargetValue(settings.crushOn);
     bitsSmoothed.setTargetValue(settings.bits);
-    dieOnSmoothed.setTargetValue(settings.dieOn);
+    clipOnSmoothed.setTargetValue(settings.clipOn);
     ceilingSmoothed.setTargetValue(settings.ceiling);
     mixSmoothed.setTargetValue(settings.mix);
     outputGainSmoothed.setTargetValue(settings.outputGain);
@@ -166,7 +166,7 @@ void WxCrusherAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
         return;
 
     // ================================================================
-    // 😈 INPUT → DRIVE → CRUSH → DIE → MIX → OUTPUT
+    // 😈 INPUT → DRIVE → BITCRUSH → CLIPPER → MIX → OUTPUT
     // ================================================================
     auto* const* channelData = buffer.getArrayOfWritePointers();
     const float channelScale = 1.0f / (float)numChannels;
@@ -189,7 +189,7 @@ void WxCrusherAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
         settings.driveGain  = driveGainSmoothed.getNextValue();
         settings.crushOn    = crushOnSmoothed.getNextValue();
         settings.bits       = bitsSmoothed.getNextValue();
-        settings.dieOn      = dieOnSmoothed.getNextValue();
+        settings.clipOn     = clipOnSmoothed.getNextValue();
         settings.ceiling    = ceilingSmoothed.getNextValue();
         settings.mix        = mixSmoothed.getNextValue();
         settings.outputGain = outputGainSmoothed.getNextValue();
@@ -221,7 +221,7 @@ void WxCrusherAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, juc
     if (tapCount > 0)
         visualTap.pushSamples(tapInput, tapOutput, tapCount);
 
-    // CRUSH 활동량은 소리가 거의 없을 때(평균 -80dB 미만)는 0 으로 봅니다.
+    // BITCRUSH 활동량은 소리가 거의 없을 때(평균 -80dB 미만)는 0 으로 봅니다.
     const float crushRatio = activity.crushInput > 1.0e-4f * (float)(numSamples * numChannels)
                                  ? activity.crushChange / activity.crushInput : 0.0f;
 
@@ -316,23 +316,23 @@ juce::AudioProcessorValueTreeState::ParameterLayout WxCrusherAudioProcessor::cre
         juce::AudioParameterFloatAttributes().withLabel("dB").withStringFromValueFunction(withSign)
                                              .withValueFromStringFunction(parseOr(0.0f))));
 
-    // --- II. CRUSH ---
+    // --- II. BITCRUSH ---
     layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID{ ParamID::crushOn, 1 }, "Crush On", true));
+        juce::ParameterID{ ParamID::crushOn, 1 }, "Bitcrush On", true));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{ ParamID::crush, 1 }, "Crush Bits",
+        juce::ParameterID{ ParamID::crush, 1 }, "Bitcrush Bits",
         makeReversedRange(cleanBits, minBits),               // 노브 왼쪽 16bit → 오른쪽 1bit
         cleanBits,
         juce::AudioParameterFloatAttributes().withLabel("bit").withStringFromValueFunction(oneDecimal)
                                              .withValueFromStringFunction(parseOr(cleanBits))));
 
-    // --- III. DIE ---
+    // --- III. CLIPPER ---
     layout.add(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID{ ParamID::dieOn, 1 }, "Die On", true));
+        juce::ParameterID{ ParamID::clipOn, 1 }, "Clipper On", true));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID{ ParamID::die, 1 }, "Die Ceiling",
+        juce::ParameterID{ ParamID::clip, 1 }, "Clipper Ceiling",
         makeReversedRange(0.0f, minCeilingDb),               // 노브 왼쪽 0dB → 오른쪽 -24dB
         0.0f,
         juce::AudioParameterFloatAttributes().withLabel("dB").withStringFromValueFunction(withSign)

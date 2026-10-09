@@ -3,7 +3,7 @@
     WxControls.h
 
     🎛️ 스테이지 모듈 : [번호 + 이름 + ON/OFF]  /  큰 노브  /  숫자  /  LED + 설명
-    DRIVE, CRUSH, DIE 는 ON/OFF 버튼과 LED 가 있고,
+    DRIVE, BITCRUSH, CLIPPER 는 ON/OFF 버튼과 LED 가 있고,
     MIX, OUTPUT 은 같은 모양에서 버튼과 LED 만 뺀 버전입니다.
   ==============================================================================
 */

@@ -475,7 +475,7 @@ void WxTransferCurve::setSettings(const wx::Settings& newSettings)
 
     if (differs(settings.driveOn, newSettings.driveOn) || differs(settings.driveGain, newSettings.driveGain)
         || differs(settings.crushOn, newSettings.crushOn) || differs(settings.bits, newSettings.bits)
-        || differs(settings.dieOn, newSettings.dieOn) || differs(settings.ceiling, newSettings.ceiling)
+        || differs(settings.clipOn, newSettings.clipOn) || differs(settings.ceiling, newSettings.ceiling)
         || differs(settings.mix, newSettings.mix) || differs(settings.outputGain, newSettings.outputGain))
     {
         settings = newSettings;
@@ -502,9 +502,9 @@ void WxTransferCurve::setInputLevel(float newLevel)
 
 float WxTransferCurve::getInputRange() const
 {
-    // 소리가 꺾이는 지점 (DIE 천장 또는 0dBFS 에 닿는 입력 크기)
+    // 소리가 꺾이는 지점 (CLIPPER 천장 또는 0dBFS 에 닿는 입력 크기)
     const float effectiveGain = 1.0f + settings.driveOn * (settings.driveGain - 1.0f);
-    const float effectiveCeiling = settings.dieOn > 0.5f ? settings.ceiling : 1.0f;
+    const float effectiveCeiling = settings.clipOn > 0.5f ? settings.ceiling : 1.0f;
     const float kneeInput = effectiveCeiling / juce::jmax(1.0f, effectiveGain);
 
     // 1.1 → 0.55 → 0.275 ... 꺾이는 지점이 화면 안에 넉넉히 들어오는 데까지만 확대
@@ -565,7 +565,7 @@ void WxTransferCurve::paint(juce::Graphics& g)
     g.drawDashedLine({ toX(-inputRange), toY(-inputRange), toX(inputRange), toY(inputRange) }, dashes, 2, 1.0f);
 
     // 3. 지금 설정의 입력 → 출력 곡선
-    juce::Graphics::ScopedSaveState clip(g);
+    juce::Graphics::ScopedSaveState clipRegion(g);
     g.reduceClipRegion(plot.toNearestInt());
 
     const int numPoints = juce::jmax(64, (int)plot.getWidth() * 6);

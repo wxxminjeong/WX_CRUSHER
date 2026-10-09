@@ -6,7 +6,7 @@
     오디오 스레드는 절대 기다리면 안 되므로 잠금(lock) 없는 FIFO 와 atomic 만 씁니다.
       - 파형/스펙트럼용 샘플 (입력 모노, 출력 모노)
       - 입력/출력 피크 레벨
-      - DIE 스테이지에서 실제로 잘려나간 샘플 비율
+      - CLIPPER 스테이지에서 실제로 잘려나간 샘플 비율
   ==============================================================================
 */
 
@@ -35,8 +35,8 @@ public:
     }
 
     // [오디오 스레드] 블록 하나를 처리할 때마다 레벨 정보를 남깁니다.
-    //   clipRatio  = DIE 에서 잘린 샘플 비율 (0 ~ 1)
-    //   crushRatio = CRUSH 가 바꾼 양 / 들어간 소리 크기
+    //   clipRatio  = CLIPPER 에서 잘린 샘플 비율 (0 ~ 1)
+    //   crushRatio = BITCRUSH 가 바꾼 양 / 들어간 소리 크기
     void pushLevels(float inputPeak, float outputPeak, float clipRatio, float crushRatio) noexcept
     {
         storeMax(inputPeakLevel, inputPeak);

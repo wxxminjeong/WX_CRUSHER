@@ -2,7 +2,7 @@
   ==============================================================================
 
     WX CRUSHER - PluginProcessor.h
-    INPUT → I. DRIVE → II. CRUSH → III. DIE → MIX → OUTPUT
+    INPUT → I. DRIVE → II. BITCRUSH → III. CLIPPER → MIX → OUTPUT
 
   ==============================================================================
 */
@@ -80,15 +80,15 @@ private:
     std::atomic<float>* driveParam = nullptr;
     std::atomic<float>* crushOnParam = nullptr;
     std::atomic<float>* crushParam = nullptr;
-    std::atomic<float>* dieOnParam = nullptr;
-    std::atomic<float>* dieParam = nullptr;
+    std::atomic<float>* clipOnParam = nullptr;
+    std::atomic<float>* clipParam = nullptr;
     std::atomic<float>* mixParam = nullptr;
     std::atomic<float>* outputParam = nullptr;
 
     // 🧈 노브를 돌리거나 ON/OFF 할 때 "틱" 소리가 나지 않도록 값을 부드럽게 바꿔주는 장치
     juce::SmoothedValue<float> driveOnSmoothed, driveGainSmoothed;
     juce::SmoothedValue<float> crushOnSmoothed, bitsSmoothed;
-    juce::SmoothedValue<float> dieOnSmoothed, ceilingSmoothed;
+    juce::SmoothedValue<float> clipOnSmoothed, ceilingSmoothed;
     juce::SmoothedValue<float> mixSmoothed, outputGainSmoothed;
 
     //==============================================================================

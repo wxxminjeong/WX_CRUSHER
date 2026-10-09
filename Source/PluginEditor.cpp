@@ -12,14 +12,14 @@ WxMainView::WxMainView(WxCrusherAudioProcessor& p)
     : audioProcessor(p),
       display(p.displayMode),
       driveModule(p.apvts, "I", "DRIVE", "GAIN", wx::ParamID::drive, wx::ParamID::driveOn),
-      crushModule(p.apvts, "II", "CRUSH", "BIT DEPTH", wx::ParamID::crush, wx::ParamID::crushOn),
-      dieModule(p.apvts, "III", "DIE", "CEILING", wx::ParamID::die, wx::ParamID::dieOn),
+      crushModule(p.apvts, "II", "BITCRUSH", "BIT DEPTH", wx::ParamID::crush, wx::ParamID::crushOn),
+      clipModule(p.apvts, "III", "CLIPPER", "CEILING", wx::ParamID::clip, wx::ParamID::clipOn),
       mixModule(p.apvts, "", "MIX", "DRY / WET", wx::ParamID::mix),
       outputModule(p.apvts, "", "OUTPUT", "LEVEL", wx::ParamID::output),
       pulledInput((size_t)WxVisualTap::capacity), pulledOutput((size_t)WxVisualTap::capacity)
 {
     for (auto* child : std::initializer_list<juce::Component*> { &display, &transferCurve, &inputMeter, &outputMeter,
-                                                                 &driveModule, &crushModule, &dieModule,
+                                                                 &driveModule, &crushModule, &clipModule,
                                                                  &mixModule, &outputModule })
         addAndMakeVisible(child);
 
@@ -97,10 +97,10 @@ void WxMainView::timerCallback()
     if (inputLevel < 1.0e-3f)
         inputLevel = 0.0f;
 
-    // DIE : 잘린 샘플이 있으면 확 켜짐
+    // CLIPPER : 잘린 샘플이 있으면 확 켜짐
     clipActivity = follow(clipActivity, heldClipRatio > 0.0f ? juce::jmin(1.0f, 0.45f + heldClipRatio * 2.0f) : 0.0f);
 
-    // CRUSH : 바뀐 양 0.1% → 꺼짐, 1% → 1/3, 10% → 2/3, 100% → 최대
+    // BITCRUSH : 바뀐 양 0.1% → 꺼짐, 1% → 1/3, 10% → 2/3, 100% → 최대
     crushActivity = follow(crushActivity, heldCrushRatio > 1.0e-3f ? juce::jlimit(0.0f, 1.0f, std::log10(heldCrushRatio * 1000.0f) / 3.0f) : 0.0f);
 
     // 소리가 들어오고 있는 정도 (-60dB 이하 = 0, -30dB 이상 = 1)
@@ -115,14 +115,14 @@ void WxMainView::timerCallback()
     transferCurve.setInputLevel(inputLevel);
 
     // 5. 💡 스테이지 LED = "이 스테이지가 지금 실제로 소리를 바꾸고 있는가"
-    //    DRIVE : 노브 양 x 소리가 있는지 / CRUSH : 실제로 바뀐 양 / DIE : 실제로 잘린 양
+    //    DRIVE : 노브 양 x 소리가 있는지 / BITCRUSH : 실제로 바뀐 양 / CLIPPER : 실제로 잘린 양
     driveModule.setActivity(settings.driveOn > 0.5f ? driveModule.getKnobPosition() * presence : 0.0f);
     crushModule.setActivity(settings.crushOn > 0.5f ? crushActivity : 0.0f);
-    dieModule.setActivity(settings.dieOn > 0.5f ? clipActivity : 0.0f);
+    clipModule.setActivity(settings.clipOn > 0.5f ? clipActivity : 0.0f);
 
     // 6. 🩸 배경 글로우 : 소리가 나는 동안, 노브를 많이 돌릴수록 + 실제로 잘릴수록 붉게
     float destruction = 0.0f;
-    for (auto* module : { &driveModule, &crushModule, &dieModule })
+    for (auto* module : { &driveModule, &crushModule, &clipModule })
         if (module->isStageOn())
             destruction += module->getKnobPosition() / 3.0f;
 
@@ -165,13 +165,13 @@ void WxMainView::paint(juce::Graphics& g)
 
     g.setFont(fonts->mono(13.0f));
     g.setColour(Palette::red);
-    g.drawText("DRIVE / CRUSH / DIE", 232, 26, 240, 20, juce::Justification::centredLeft, false);
+    g.drawText("DRIVE / BITCRUSH / CLIPPER", 232, 26, 240, 20, juce::Justification::centredLeft, false);
 
     // ✍️ Signature (wxxmin)
     g.setColour(Palette::dim);
     g.drawText("wxxmin", baseWidth - 200, 26, 178, 20, juce::Justification::centredRight, false);
 
-    // 4. 신호 흐름 화살표 (DRIVE › CRUSH › DIE)
+    // 4. 신호 흐름 화살표 (DRIVE › BITCRUSH › CLIPPER)
     g.setColour(Palette::dim);
     for (auto* module : { &driveModule, &crushModule })
     {
@@ -202,10 +202,10 @@ void WxMainView::resized()
     inputMeter.setBounds(882, 70, 27, 250);
     outputMeter.setBounds(909, 70, 27, 250);
 
-    // 아래: 스테이지 줄  (DRIVE › CRUSH › DIE    MIX  OUTPUT)
+    // 아래: 스테이지 줄  (DRIVE › BITCRUSH › CLIPPER    MIX  OUTPUT)
     driveModule.setBounds(20, 338, 190, 242);
     crushModule.setBounds(226, 338, 190, 242);
-    dieModule.setBounds(432, 338, 190, 242);
+    clipModule.setBounds(432, 338, 190, 242);
     mixModule.setBounds(638, 338, 145, 242);
     outputModule.setBounds(795, 338, 145, 242);
 }

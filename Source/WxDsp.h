@@ -6,7 +6,7 @@
     오디오 처리(PluginProcessor)와 화면의 전달 곡선(Transfer Curve)이
     "완전히 같은 수식"을 쓰도록 여기 한 곳에만 적어둡니다.
 
-    신호 흐름:  INPUT → I. DRIVE → II. CRUSH → III. DIE → MIX → OUTPUT
+    신호 흐름:  INPUT → I. DRIVE → II. BITCRUSH → III. CLIPPER → MIX → OUTPUT
   ==============================================================================
 */
 
@@ -24,8 +24,8 @@ namespace wx
         inline constexpr const char* drive   = "DRIVE";
         inline constexpr const char* crushOn = "CRUSH_ON";
         inline constexpr const char* crush   = "CRUSH";
-        inline constexpr const char* dieOn   = "DIE_ON";
-        inline constexpr const char* die     = "DIE";
+        inline constexpr const char* clipOn  = "CLIP_ON";
+        inline constexpr const char* clip    = "CLIP";
         inline constexpr const char* mix     = "MIX";
         inline constexpr const char* output  = "OUTPUT";
     }
@@ -46,7 +46,7 @@ namespace wx
         return x * gain;
     }
 
-    // II. CRUSH : 소리의 해상도를 낮춰 계단을 만듭니다. (16bit → 1bit)
+    // II. BITCRUSH : 소리의 해상도를 낮춰 계단을 만듭니다. (16bit → 1bit)
     inline float crush(float x, float bits) noexcept
     {
         if (bits >= cleanBits)
@@ -56,8 +56,8 @@ namespace wx
         return std::round(x / stepSize) * stepSize;
     }
 
-    // III. DIE : 천장(ceiling)을 넘는 소리를 가차 없이 잘라 사각파로 만듭니다.
-    inline float die(float x, float ceiling) noexcept
+    // III. CLIPPER : 천장(ceiling)을 넘는 소리를 가차 없이 잘라 사각파로 만듭니다.
+    inline float clip(float x, float ceiling) noexcept
     {
         return juce::jlimit(-ceiling, ceiling, x);
     }
@@ -69,7 +69,7 @@ namespace wx
         // 스테이지 ON/OFF (0 = 꺼짐, 1 = 켜짐, 그 사이 = 클릭 없이 전환되는 중)
         float driveOn = 1.0f;
         float crushOn = 1.0f;
-        float dieOn   = 1.0f;
+        float clipOn  = 1.0f;
 
         float driveGain  = 1.0f;      // 배수
         float bits       = cleanBits; // 비트
@@ -81,13 +81,13 @@ namespace wx
     // 📺 각 스테이지가 "지금 실제로 얼마나 일하고 있는지" 모으는 곳 (화면의 LED 용)
     struct StageActivity
     {
-        float crushChange = 0.0f;  // CRUSH 가 바꾼 양의 합
-        float crushInput  = 0.0f;  // CRUSH 에 들어간 소리 크기의 합
-        int clippedSamples = 0;    // DIE 에서 잘린 샘플 수
+        float crushChange = 0.0f;  // BITCRUSH 가 바꾼 양의 합
+        float crushInput  = 0.0f;  // BITCRUSH 에 들어간 소리 크기의 합
+        int clippedSamples = 0;    // CLIPPER 에서 잘린 샘플 수
     };
 
-    // DRIVE → CRUSH → DIE → MIX → OUTPUT
-    // activity 가 주어지면 CRUSH / DIE 가 실제로 바꾼 양을 같이 모읍니다.
+    // DRIVE → BITCRUSH → CLIPPER → MIX → OUTPUT
+    // activity 가 주어지면 BITCRUSH / CLIPPER 가 실제로 바꾼 양을 같이 모읍니다.
     inline float processSample(float input, const Settings& s, StageActivity* activity = nullptr) noexcept
     {
         float wet = input;
@@ -108,19 +108,19 @@ namespace wx
             wet += change;
         }
 
-        if (s.dieOn > 0.0f)
+        if (s.clipOn > 0.0f)
         {
             if (activity != nullptr && std::abs(wet) > s.ceiling)
                 ++activity->clippedSamples;
 
-            wet += s.dieOn * (die(wet, s.ceiling) - wet);
+            wet += s.clipOn * (clip(wet, s.ceiling) - wet);
         }
 
         return s.outputGain * (input + s.mix * (wet - input));
     }
 
     //==============================================================================
-    // 🔄 노브를 오른쪽으로 돌릴수록 값이 '작아지는' 범위 (CRUSH: 16 → 1bit, DIE: 0 → -24dB)
+    // 🔄 노브를 오른쪽으로 돌릴수록 값이 '작아지는' 범위 (BITCRUSH: 16 → 1bit, CLIPPER: 0 → -24dB)
     //    세 노브 모두 "오른쪽 = 더 부서짐" 으로 방향을 맞추기 위해 씁니다.
     inline juce::NormalisableRange<float> makeReversedRange(float leftValue, float rightValue)
     {

@@ -7,7 +7,7 @@
     │ ┌ WAVE | SPECTRUM ───────────────┐ ┌ TRANSFER ─┐ ┌ I/O ┐    │
     │ │                                │ │           │ │ ▮ ▮ │    │
     │ └────────────────────────────────┘ └───────────┘ └─────┘    │
-    │ ┌ I DRIVE ┐ › ┌ II CRUSH ┐ › ┌ III DIE ┐  ┌ MIX ┐ ┌ OUTPUT ┐ │
+    │ ┌ I DRIVE ┐ › ┌ II BITCRUSH ┐ › ┌ III CLIPPER ┐  ┌ MIX ┐ ┌ OUTPUT ┐ │
     │ └─────────┘   └──────────┘   └─────────┘  └─────┘ └────────┘ │
     └──────────────────────────────────────────────────────────────┘
   ==============================================================================
@@ -49,7 +49,7 @@ private:
     WxMeter inputMeter { "IN" }, outputMeter { "OUT" };
 
     // 🎛️ 3단계 + MIX / OUTPUT
-    WxKnobModule driveModule, crushModule, dieModule, mixModule, outputModule;
+    WxKnobModule driveModule, crushModule, clipModule, mixModule, outputModule;
 
     std::vector<float> pulledInput, pulledOutput;
 
@@ -59,8 +59,8 @@ private:
     float heldInputPeak = 0.0f, heldOutputPeak = 0.0f, heldClipRatio = 0.0f, heldCrushRatio = 0.0f;
 
     float inputLevel = 0.0f;       // 전달 곡선 / LED 에 쓰는 입력 크기 (천천히 꺼짐)
-    float crushActivity = 0.0f;    // CRUSH 가 실제로 소리를 바꾸는 정도 (천천히 꺼짐)
-    float clipActivity = 0.0f;     // DIE 에서 실제로 잘리고 있는 정도 (천천히 꺼짐)
+    float crushActivity = 0.0f;    // BITCRUSH 가 실제로 소리를 바꾸는 정도 (천천히 꺼짐)
+    float clipActivity = 0.0f;     // CLIPPER 에서 실제로 잘리고 있는 정도 (천천히 꺼짐)
     float glowLevel = 0.0f;        // 배경 글로우 (부드럽게 따라감)
     float glow = 0.0f;             // 지금 그려진 배경 글로우 (1/32 단계)
 
